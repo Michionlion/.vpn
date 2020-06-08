@@ -1,0 +1,48 @@
+#!/bin/bash
+
+source $HOME/.vpn/control.sh
+
+ON_COLOR=${on_color:-$(xrescat i3xrocks.value.nominal "#2E8B57")}
+OFF_COLOR=${off_color:-$(xrescat i3xrocks.warning "#B58900")}
+LABEL_COLOR=${label_color:-$(xrescat i3xrocks.label.color "#839496")}
+VALUE_FONT=${font:-$(xrescat i3xrocks.value.font "Source Code Pro Medium 13")}
+LABEL=${label:-$(xrescat i3xrocks.vpn.label "")}
+ON="🔒"
+OFF="🔓"
+
+STATUS=1
+STATUS_LINE="${LABEL}${OFF}"
+
+function do_status() {
+    local vpn_status="[${OFF}]"
+    local color=$OFF_COLOR
+    if vpn st > /dev/null; then
+        vpn_status="[${ON}]"
+        color=$ON_COLOR
+        STATUS=0
+    fi
+
+    STATUS_LINE="<span color=\"${LABEL_COLOR}\">${LABEL}</span><span font_desc=\"${VALUE_FONT}\" color=\"${color}\"> $vpn_status</span>"
+
+    return $STATUS
+}
+
+do_status
+
+if [[ -n "$button" ]]; then
+    if ((STATUS==0)); then
+        # vpn is on, turn off
+        vpn off > /tmp/vpnout
+        notify-send --urgency="normal" --category="network.disconnected" --hint="string:status:$(cat /tmp/vpnout)" "VPN disconnected!"
+        rm /tmp/vpnout
+    else
+        vpn on > /tmp/vpnout
+        notify-send --urgency="normal" --category="network.connected" --hint="string:status:$(cat /tmp/vpnout)" "VPN connected!"
+        rm /tmp/vpnout
+    fi
+    sleep 0.25
+    do_status
+fi
+
+echo "$STATUS_LINE"
+
